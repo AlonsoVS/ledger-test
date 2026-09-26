@@ -1,7 +1,7 @@
 # Credit Ledger — Specification
 
-> Source specification for the exercise. The OpenSpec change
-> `openspec/changes/add-credit-ledger/` is authoritative; refinements made during
+> Source specification for the exercise. The OpenSpec specs in
+> `openspec/specs/` are authoritative; refinements made during
 > design review are summarised in [Amendments](#16-amendments-design-review).
 
 ## 1. Problem
@@ -681,7 +681,7 @@ The implementation is considered correct when:
 
 # 16. Amendments (design review)
 
-Details and rationale in `openspec/changes/add-credit-ledger/design.md`.
+Details and rationale in `openspec/changes/archive/2026-09-25-add-credit-ledger/design.md`.
 
 * **R1 — Overpayment protection.** A payment is created only if
   `amount ≤ outstanding_balance − pending_payments` (checked under the account
