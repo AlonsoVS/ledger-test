@@ -12,5 +12,5 @@ def ensure_can_create(balance: Balance, type_: TransactionType, amount: Decimal)
     """
     if type_ is TransactionType.PURCHASE and amount > balance.available_credit:
         raise InsufficientCredit(amount, balance.available_credit)
-    if type_ is TransactionType.PAYMENT and amount > balance.payable_amount:
-        raise Overpayment(amount, balance.payable_amount)
+    if type_ is TransactionType.PAYMENT and amount > balance.payment_capacity:
+        raise Overpayment(amount, balance.payment_capacity)

@@ -19,7 +19,7 @@ def balance(
 def test_available_credit_derivation() -> None:
     b = balance("1000.00", "179.50", reserved="200.00", pending_payments="50.00")
     assert b.available_credit == D("620.50")
-    assert b.payable_amount == D("129.50")
+    assert b.payment_capacity == D("129.50")
     assert b.invariant_violations() == []
 
 
@@ -34,7 +34,7 @@ def test_invariant_violations_are_reported() -> None:
     violations = b.invariant_violations()
     assert any("negative available credit" in v for v in violations)
     assert any("negative outstanding" in v for v in violations)
-    assert any("pending payments exceed" in v for v in violations)
+    assert any("negative payment capacity" in v for v in violations)
 
 
 class TestPurchaseRule:

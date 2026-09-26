@@ -10,8 +10,8 @@ class Balance:
 
     credit_granted: Decimal
     outstanding_balance: Decimal
-    reserved_credit: Decimal
-    pending_payments: Decimal
+    reserved_credit: Decimal  # credit reserved by PENDING purchases
+    pending_payments: Decimal  # payment capacity reserved by PENDING payments
 
     @classmethod
     def empty(cls) -> "Balance":
@@ -22,8 +22,12 @@ class Balance:
         return self.credit_granted - self.outstanding_balance - self.reserved_credit
 
     @property
-    def payable_amount(self) -> Decimal:
-        """How much can still be paid without the account ever going into credit."""
+    def payment_capacity(self) -> Decimal:
+        """Outstanding debt not yet claimed by a PENDING payment.
+
+        A pending payment reserves capacity at creation; completing it lowers outstanding and
+        pending_payments by the same amount, so the reserved capacity stays consumed.
+        """
         return self.outstanding_balance - self.pending_payments
 
     def invariant_violations(self) -> list[str]:
@@ -37,6 +41,6 @@ class Balance:
             violations.append(f"negative available credit: {self.available_credit}")
         if self.outstanding_balance < 0:
             violations.append(f"negative outstanding balance: {self.outstanding_balance}")
-        if self.payable_amount < 0:
-            violations.append(f"pending payments exceed outstanding: {self.payable_amount}")
+        if self.payment_capacity < 0:
+            violations.append(f"negative payment capacity: {self.payment_capacity}")
         return violations

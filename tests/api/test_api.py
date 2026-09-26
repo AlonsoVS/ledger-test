@@ -53,6 +53,7 @@ def test_full_flow(client: TestClient) -> None:
         "reserved_credit": "0.00",
         "pending_payments": "0.00",
         "available_credit": "820.50",
+        "payment_capacity": "179.50",
     }
     assert len(client.get(f"/accounts/{account_id}/transactions").json()) == 3
 

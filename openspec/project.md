@@ -51,15 +51,18 @@ consistency and clear domain rules take priority over feature breadth.
 - **DISBURSEMENT** increases credit granted.
 - **PURCHASE** consumes credit: reserves it while `PENDING`, becomes outstanding
   debt when `COMPLETED`, releases the reservation when `FAILED`.
-- **PAYMENT** reduces outstanding debt when `COMPLETED`.
+- **PAYMENT** reserves payment capacity while `PENDING` (no effect on outstanding or
+  available), reduces outstanding debt when `COMPLETED`, releases the reservation
+  when `FAILED`.
 - Derived quantities (completed/pending sums per type):
   - `credit_granted = Σ DISBURSEMENT[COMPLETED]`
   - `outstanding_balance = Σ PURCHASE[COMPLETED] − Σ PAYMENT[COMPLETED]`
   - `reserved_credit = Σ PURCHASE[PENDING]`
   - `pending_payments = Σ PAYMENT[PENDING]`
   - `available_credit = credit_granted − outstanding_balance − reserved_credit`
+  - `payment_capacity = outstanding_balance − pending_payments`
 - Invariants: `available_credit ≥ 0`, `outstanding_balance ≥ 0`,
-  `outstanding_balance − pending_payments ≥ 0`, amounts `> 0`, terminal states
+  `payment_capacity ≥ 0`, amounts `> 0`, terminal states
   are immutable, `(account_id, idempotency_key)` is unique.
 
 ## Important Constraints

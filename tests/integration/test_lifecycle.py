@@ -152,19 +152,24 @@ class TestPayment:
         assert tx.status is S.PENDING
         assert balance.outstanding_balance == D("300.00")
         assert balance.available_credit == D("700.00")
+        # No effect on outstanding or available, but the payment reserves payment capacity.
         assert balance.pending_payments == D("100.00")
+        assert balance.payment_capacity == D("200.00")
 
     def test_completed_payment_releases_credit(self, service: LedgerService) -> None:
         account_id = funded_account(service)
         create(service, account_id, T.PURCHASE, "300.00", complete=True)
         tx = create(service, account_id, T.PAYMENT, "100.00")
 
+        before = service.get_balance(account_id)
         service.complete_transaction(tx.id)
         balance = service.get_balance(account_id)
 
         assert balance.outstanding_balance == D("200.00")
         assert balance.available_credit == D("800.00")
         assert balance.pending_payments == D("0.00")
+        # Completion consumes the reservation: capacity is unchanged, not re-checked.
+        assert balance.payment_capacity == before.payment_capacity == D("200.00")
 
     def test_failed_payment_has_no_effect(self, service: LedgerService) -> None:
         account_id = funded_account(service)
@@ -177,6 +182,7 @@ class TestPayment:
         assert balance.outstanding_balance == D("300.00")
         assert balance.available_credit == D("700.00")
         assert balance.pending_payments == D("0.00")
+        assert balance.payment_capacity == D("300.00")
 
     def test_full_payment(self, service: LedgerService) -> None:
         account_id = funded_account(service)
@@ -197,12 +203,24 @@ class TestPayment:
         with pytest.raises(Overpayment):
             create(service, account_id, T.PAYMENT, "60.00")
 
+    def test_failed_payment_releases_its_reservation(self, service: LedgerService) -> None:
+        account_id = funded_account(service)
+        create(service, account_id, T.PURCHASE, "300.00", complete=True)
+        pending = create(service, account_id, T.PAYMENT, "250.00")
+        with pytest.raises(Overpayment):
+            create(service, account_id, T.PAYMENT, "300.00")
+
+        service.fail_transaction(pending.id)
+
+        assert service.get_balance(account_id).payment_capacity == D("300.00")
+        create(service, account_id, T.PAYMENT, "300.00")
+
     def test_payment_without_debt_is_rejected(self, service: LedgerService) -> None:
         account_id = funded_account(service)
         with pytest.raises(Overpayment):
             create(service, account_id, T.PAYMENT, "0.01")
 
-    def test_pending_purchase_is_not_payable(self, service: LedgerService) -> None:
+    def test_pending_purchase_adds_no_payment_capacity(self, service: LedgerService) -> None:
         account_id = funded_account(service)
         create(service, account_id, T.PURCHASE, "300.00")  # reserved, not outstanding
         with pytest.raises(Overpayment):

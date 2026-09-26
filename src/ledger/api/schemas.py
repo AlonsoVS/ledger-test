@@ -33,6 +33,7 @@ class BalanceOut(BaseModel):
     reserved_credit: Decimal
     pending_payments: Decimal
     available_credit: Decimal
+    payment_capacity: Decimal
 
 
 class AccountOut(BaseModel):
@@ -65,6 +66,7 @@ class AccountWithBalanceOut(AccountOut):
                 reserved_credit=b.reserved_credit,
                 pending_payments=b.pending_payments,
                 available_credit=b.available_credit,
+                payment_capacity=b.payment_capacity,
             ),
         )
 

@@ -1,9 +1,4 @@
-# account-balance Specification
-
-## Purpose
-Derive an account's credit granted, outstanding balance, reserved credit, pending payments and available credit exactly from the transaction ledger, in a single consistent snapshot, and define the invariants that must hold for every account.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Balance derivation
 The system SHALL derive an account's balance from its transactions as follows:
@@ -42,16 +37,6 @@ The system SHALL derive an account's balance from its transactions as follows:
 - **WHEN** the balance is requested
 - **THEN** none of those amounts appear in any balance quantity
 - **AND** the failed transactions are still listed in the account's ledger
-
-### Requirement: Consistent balance snapshot
-The system SHALL compute all balance quantities of an account in a single
-database statement, so that every quantity reflects the same snapshot of the
-ledger even while transitions commit concurrently.
-
-#### Scenario: Concurrent purchase completion during a balance read
-- **WHEN** a pending purchase is completed while the account balance is being read
-- **THEN** the read reports the purchase amount either entirely in
-  `reserved_credit` or entirely in `outstanding_balance`, never in both or neither
 
 ### Requirement: Account invariants
 For every account, after every committed operation, the system SHALL maintain:
