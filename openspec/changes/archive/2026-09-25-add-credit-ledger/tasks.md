@@ -45,4 +45,4 @@
 ## 7. Documentation
 - [x] 7.1 README: setup, running, API examples, design summary and trade-offs (link to design.md)
 - [x] 7.2 Validate the change with `openspec validate add-credit-ledger --strict`
-- [ ] 7.3 Archive the change into `openspec/specs/` after implementation
+- [x] 7.3 Archive the change into `openspec/specs/` after implementation

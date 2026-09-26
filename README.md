@@ -5,8 +5,8 @@ payments, and exact derivation of outstanding balance and available credit —
 idempotent and safe under concurrency.
 
 - Specification: [`docs/credit-ledger-spec.md`](docs/credit-ledger-spec.md)
-- OpenSpec change (requirements + scenarios): [`openspec/changes/add-credit-ledger/`](openspec/changes/add-credit-ledger/)
-- Design decisions and trade-offs: [`design.md`](openspec/changes/add-credit-ledger/design.md)
+- Current requirements + scenarios: [`openspec/specs/`](openspec/specs/) (`credit-accounts`, `account-balance`, `ledger-transactions`)
+- Design decisions and trade-offs: [`design.md`](openspec/changes/archive/2026-09-25-add-credit-ledger/design.md) (archived change `add-credit-ledger`)
 
 ## Quick start
 
