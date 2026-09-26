@@ -57,16 +57,20 @@ outstanding_balance = Σ PURCHASE[COMPLETED] − Σ PAYMENT[COMPLETED]
 reserved_credit     = Σ PURCHASE[PENDING]
 pending_payments    = Σ PAYMENT[PENDING]
 available_credit    = credit_granted − outstanding_balance − reserved_credit
+payment_capacity    = outstanding_balance − pending_payments
 ```
 
 Invariants held after every committed operation:
-`available_credit ≥ 0`, `outstanding_balance ≥ 0`, `outstanding_balance − pending_payments ≥ 0`,
+`available_credit ≥ 0`, `outstanding_balance ≥ 0`, `payment_capacity ≥ 0`,
 credit conservation, positive amounts, immutable terminal states, unique
 `(account_id, idempotency_key)`.
 
 Transactions are created `PENDING` and move once to `COMPLETED` or `FAILED`.
-A pending purchase reserves credit; a failed one releases it. Payments reduce debt
-only when completed, and cannot exceed `outstanding − pending_payments`.
+A pending purchase reserves credit; completing it turns the reservation into debt,
+failing it releases it. Payments work the same way on the other side. A pending
+payment leaves outstanding and available unchanged but reserves **payment
+capacity** (`amount ≤ payment_capacity` at creation). Completing it reduces debt and
+uses up the reservation. Failing it releases the reservation.
 
 ## How correctness is enforced
 
@@ -80,7 +84,9 @@ only when completed, and cannot exceed `outstanding − pending_payments`.
 
 Transitions take no account lock: no transition can break an invariant
 (purchase completion keeps `available` constant; failures and disbursements only
-add availability; payment completion was pre-validated at creation).
+add availability; payment completion uses up capacity that the pending payment
+already reserved, since outstanding and pending payments fall by the same amount,
+so `payment_capacity` is unchanged).
 
 ## Tests
 
@@ -97,11 +103,60 @@ tests/api/           HTTP status/error mapping, string amounts
   genuinely exercised. A **negative control** removes the lock and shows two
   concurrent purchases then oversubscribe credit — proving the lock is what prevents it.
 
-## Trade-offs and non-goals
+## Decisions and Trade-offs
 
-- Creation is serialised per account; fine here, limiting for very hot accounts.
-- Balance aggregation grows with ledger size (covering index mitigates); a
-  materialised projection would be the next step.
+### Ledger as source of truth
+
+The transaction ledger is the single source of truth. Account balances are
+derived from ledger transactions rather than stored as mutable state.
+
+This avoids multiple sources of truth and makes the financial history
+auditable. The trade-off is that balance calculation becomes more expensive
+as the ledger grows; a materialized projection could be introduced later.
+
+### Simplified ledger instead of double-entry accounting
+
+The implementation uses a simplified ledger rather than a full double-entry
+accounting model because the exercise only requires modeling a single credit
+account.
+
+A full double-entry model would provide stronger accounting semantics but
+would introduce additional accounts and entries that are unnecessary for
+the scope of this exercise.
+
+### Account-level pessimistic locking
+
+Transaction creation uses `SELECT ... FOR UPDATE` on the credit account.
+
+This serializes operations whose validation depends on the current ledger
+state, including purchases and payments. The trade-off is reduced
+concurrency for highly contended accounts.
+
+### Idempotency
+
+The pair `(account_id, idempotency_key)` is unique.
+
+Identical retries return the existing transaction, while reuse of the same
+key with different parameters is rejected.
+
+The application performs the idempotency check before business validation,
+while the database constraint provides the final concurrency-safe guarantee.
+
+### Conditional state transitions
+
+Transaction completion/failure uses an atomic conditional update:
+
+```sql
+UPDATE transactions
+SET status = ...
+WHERE id = ...
+  AND status = 'PENDING'
+```
+
+This prevents the same transaction from being transitioned twice without
+requiring an account-level lock for every state transition.
+
+### Out of scope
+
 - Pending purchases never expire; overpayment/credit balances are not modelled.
-- Out of scope: interest, fees, multi-currency, auth, customers, external
-  providers, double-entry accounting.
+- Interest, fees, multi-currency, auth, customers, external providers.
