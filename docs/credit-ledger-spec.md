@@ -308,7 +308,8 @@ No financial effect.
 
 ## 7.2 Purchase
 
-A purchase is the only transaction type that requires an availability check before creation.
+A purchase requires an availability check before creation. *(Amended by R1: payments
+require an equivalent payment-capacity check; see §7.3.)*
 
 ### PENDING
 
@@ -343,27 +344,46 @@ available_credit += amount
 
 ## 7.3 Payment
 
+*(Amended by R1.)* A payment requires a payment-capacity check before creation,
+mirroring the purchase availability check:
+
+```text
+payment_capacity = outstanding_balance - pending_payments
+amount <= payment_capacity
+```
+
 ### PENDING
 
-No financial effect:
+A pending payment does not affect `outstanding_balance` or `available_credit`, but
+it reserves payment capacity, reducing the outstanding debt that later pending
+payments can claim:
 
 ```text
 outstanding_balance: unchanged
 available_credit: unchanged
+pending_payments += amount
+payment_capacity -= amount
 ```
 
 ### COMPLETED
 
-The payment reduces outstanding debt:
+The payment reduces outstanding debt and uses up its reservation:
 
 ```text
 outstanding_balance -= amount
 available_credit += amount
+pending_payments -= amount
+payment_capacity: unchanged
 ```
 
 ### FAILED
 
-No financial effect.
+No effect on `outstanding_balance` or `available_credit`; the reservation is released:
+
+```text
+pending_payments -= amount
+payment_capacity += amount
+```
 
 ---
 
@@ -683,11 +703,18 @@ The implementation is considered correct when:
 
 Details and rationale in `openspec/changes/archive/2026-09-25-add-credit-ledger/design.md`.
 
-* **R1 — Overpayment protection.** A payment is created only if
-  `amount ≤ outstanding_balance − pending_payments` (checked under the account
-  lock). This guarantees `outstanding_balance ≥ 0` and
+* **R1 — Overpayment protection / payment-capacity reservation.** A payment is
+  created only if `amount ≤ payment_capacity`, where
+  `payment_capacity = outstanding_balance − pending_payments` (checked under the
+  account lock). A pending payment therefore **reserves payment capacity**, just as a
+  pending purchase reserves credit. The reservation is used up on completion and
+  released on failure (§7.3). Creation establishes `payment_capacity ≥ 0`. Completion
+  preserves it, because outstanding and pending payments fall by the same amount, and
+  nothing else can reduce it. This guarantees `outstanding_balance ≥ 0` and
   `available_credit ≤ credit_granted`. Supersedes §7.2 "a purchase is the only
-  transaction type that requires an availability check".
+  transaction type that requires an availability check" and the original §7.3
+  "PENDING: no financial effect". Clarified by the OpenSpec change
+  `clarify-pending-payment-reservation`.
 * **R2 — Single-statement balance.** All balance quantities are computed in one
   aggregate query so they share a snapshot under `READ COMMITTED`.
 * **R3 — Idempotency ordering and locking.** All transaction creation (not only

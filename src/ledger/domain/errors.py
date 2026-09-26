@@ -46,10 +46,12 @@ class InsufficientCredit(LedgerError):
 class Overpayment(LedgerError):
     code = "OVERPAYMENT"
 
-    def __init__(self, requested: Decimal, payable: Decimal) -> None:
-        super().__init__(f"Payment of {requested} exceeds payable amount of {payable}")
+    def __init__(self, requested: Decimal, payment_capacity: Decimal) -> None:
+        super().__init__(
+            f"Payment of {requested} exceeds remaining payment capacity of {payment_capacity}"
+        )
         self.requested = requested
-        self.payable = payable
+        self.payment_capacity = payment_capacity
 
 
 class IdempotencyConflict(LedgerError):
